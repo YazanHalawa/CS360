@@ -83,13 +83,11 @@ msgd::handle(int client) {
     while (1) {
         // get a request
         string request = get_request(client);
-        cout << "This is the request: " << request << endl;
         // break if client is done or an error occurred
         if (request.empty())
             break;
         // parse request
         string response = parse_request(client, request);
-        cout << "This is the response: " << response << endl;
         // send response
         bool success = send_response(client,response);
         // break if an error occurred
@@ -142,7 +140,6 @@ msgd::performPut(int client, istringstream& iss){
         message = cache_;
         cache_ = "";
     }
-    cout << message.length() << endl;
     // Save Message
     Message newMsg;
     newMsg.user = name;
@@ -263,7 +260,7 @@ msgd::get_request(int client) {
     for (int i = 0; i < request.length(); i++){
         if (request[i] == '\n' && i != request.length()-1){
             cache_ = request.substr(i+1, request.length()-i-1);
-            request = request.substr(0, i-1);
+            request = request.substr(0, i);
         } 
     }
     return request;
