@@ -21,4 +21,10 @@ thdata::getMutexAddr(){
 	return &mutex;
 }
 
+pthread_cond_t* 
+thdata::getCondAddr(){
+	return &cond;
+}
+
+
 
