@@ -8,13 +8,17 @@ thdata::~thdata(){}
 
 int
 thdata::getNumber(){
-	int returnValue = 0;
-	returnValue = number;
-	return returnValue;
+	return number;
 }
 
 void
 thdata::setNumber(int newNum){
 	number = newNum;
 }
+
+pthread_mutex_t* 
+thdata::getMutexAddr(){
+	return &mutex;
+}
+
 

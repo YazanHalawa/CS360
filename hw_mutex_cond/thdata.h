@@ -9,8 +9,8 @@ public:
 
 	int getNumber();
 	void setNumber(int newNum);
-	pthread_mutex_t getMutex();
-	pthread_mutex_t mutex;
+	pthread_mutex_t* getMutexAddr();
 private:
 	int number;
+	pthread_mutex_t mutex;
 };

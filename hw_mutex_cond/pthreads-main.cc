@@ -25,7 +25,7 @@ main(int argc, char **argv) {
     thdata* data = new thdata();
 
     // initialize mutex
-    pthread_mutex_init(&data->mutex, NULL);
+    pthread_mutex_init(data->getMutexAddr(), NULL);
 
     srand(time(NULL));
 
@@ -50,12 +50,12 @@ void* set(void* ptr) {
     int r = rand()%100;
     if (r < 1)
     	r = 1;
-    pthread_mutex_lock(&data->mutex);
+    pthread_mutex_lock(data->getMutexAddr());
     data->setNumber(r);
     
     cout << "Storing " << data->getNumber() << endl;
 
-    pthread_mutex_unlock(&data->mutex);
+    pthread_mutex_unlock(data->getMutexAddr());
     pthread_exit(0);
 }
 
@@ -63,13 +63,11 @@ void* get(void* ptr){
 	thdata* data;
 	data = (thdata*) ptr;
 
-	
-	pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_mutex_lock(&data->mutex);
+	pthread_mutex_lock(data->getMutexAddr());
 	// Get the number
 	cout << "Reading " << data->getNumber() << endl;
 
-	pthread_mutex_unlock(&data->mutex);
+	pthread_mutex_unlock(data->getMutexAddr());
 
 	pthread_exit(0);
 }
