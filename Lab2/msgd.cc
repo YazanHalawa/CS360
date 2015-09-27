@@ -6,7 +6,7 @@ msgd::msgd(int port, bool debug) {
     buflen_ = 1024;
     buf_ = new char[buflen_+1];
     debug_ = debug;
-    buffer = Buffer();
+    buffer_ = Buffer();
     pthread_mutex_init(&mutex, NULL);
 }
 
@@ -76,9 +76,9 @@ msgd::serve() {
 
       // accept clients
     while (true) {
-        client = accept(server_,(struct sockaddr *)&client_addr,&clientlen));
+        client = accept(server_,(struct sockaddr *)&client_addr,&clientlen);
         if (client > 0){
-            buffer.append(client);
+            buffer_.append(client);
         }
         else{
             if (debug_)
@@ -89,14 +89,13 @@ msgd::serve() {
 }
 
 
-
 void*
-msgd::handleClient(void* vptr){
+handleClient(void* vptr){
     msgd* server = (msgd*) vptr;
     while(1){
-        int currClient = server->buffer.take();
-        Handler handler = Handler(currClient, &(server->msgs_), server->debug,
-                            &(server->mutex));
+        int currClient = server->buffer_.take();
+        Handler handler = Handler(currClient, server->msgs_, server->debug_,
+                            server->mutex);
         handler.handle();
         close(currClient);
     }
@@ -107,7 +106,7 @@ msgd::makeThreads(){
     for (int i = 0; i < NUMBER_OF_THREADS; i ++){
         pthread_t thread;
         pthread_create(&thread, NULL, &handleClient, this);
-        threads_.push_back();
+        threads_.push_back(&thread);
     }
 }
 

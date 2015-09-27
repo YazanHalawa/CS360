@@ -1,4 +1,4 @@
-#include <Buffer.h>	
+#include "Buffer.h"	
 
 Buffer::Buffer(){
 	// Init all mutexes and conditions
@@ -6,6 +6,8 @@ Buffer::Buffer(){
 	pthread_cond_init(&not_full, NULL);
 	pthread_cond_init(&not_empty, NULL);
 }
+
+Buffer::~Buffer(){}
 
 void Buffer::append(int client){
 	// Lock the critical section

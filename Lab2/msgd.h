@@ -15,17 +15,13 @@
 #include <vector>
 #include <pthread.h>
 #include "Buffer.h"
+#include "Handler.h"
 #include <iostream>
 
 #define NUMBER_OF_THREADS 10
 
 using namespace std;
 
-struct Message {
-    string user;
-    string subject;
-    string value;
-};
 
 // Prototype for thread routine
 void* handleClient(void * vptr);
@@ -34,7 +30,10 @@ class msgd {
 public:
     msgd(int port, bool debug);
     ~msgd();
-
+    vector<Message> msgs_;
+    bool debug_;
+    Buffer buffer_;// Holds a queue of clients
+    pthread_mutex_t mutex;
     void run();
     
 private:
@@ -49,9 +48,6 @@ private:
     int buflen_;
     char* buf_;
     string cache_;
-    bool debug_;
-    vector<Message> msgs_;
+    
     vector<pthread_t*> threads_;
-    Buffer buffer_;// Holds a queue of clients
-    pthread_mutex_t mutex;
 };

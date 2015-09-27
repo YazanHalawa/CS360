@@ -1,13 +1,12 @@
 #include "Handler.h"
 
-Handler::Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t mutex){
+Handler::Handler(int client, vector<Message>& msgs, bool debug, pthread_mutex_t mutex){
 	this->client = client;
 	this->msgs_ = msgs;
 	this->debug_ = debug;
 	buflen_ = 1024;
 	buf_ = new char [buflen_ + 1];
 	this->mutex = mutex;
-	pthread_cond_init(&cond, NULL);
 }
 
 Handler::~Handler(){

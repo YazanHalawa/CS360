@@ -15,10 +15,13 @@
 #include <vector>
 #include <pthread.h>
 #include <iostream>
+#include "Message.h"
+
+using namespace std;
 
 class Handler{
 public:
-	Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t mutex, pthread_cond_t cond);
+	Handler(int client, vector<Message>& msgs, bool debug, pthread_mutex_t mutex);
 	~Handler();
 
 	void handle();
@@ -35,11 +38,10 @@ public:
 
 private:
 	int client;
-	bool debug;
+	bool debug_;
 	int buflen_;
 	char* buf_;
 	string cache_;
-	vector<Message>* msgs_;
+	vector<Message> msgs_;
 	pthread_mutex_t mutex;
-	pthread_cond_t cond;
 };
