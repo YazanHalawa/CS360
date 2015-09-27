@@ -1,4 +1,5 @@
-@pragma once
+#pragma once
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -18,4 +19,7 @@ public:
 	queue<int> getQueue();
 private:
 	queue<int> buff;
+	pthread_mutex_t mutex;
+	pthread_cond_t not_full;
+	pthread_cond_t not_empty;
 };

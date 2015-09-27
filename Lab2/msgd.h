@@ -14,8 +14,10 @@
 #include <string>
 #include <vector>
 #include <pthread.h>
-
+#include "Buffer.h"
 #include <iostream>
+
+#define NUMBER_OF_THREADS 10
 
 using namespace std;
 
@@ -24,6 +26,9 @@ struct Message {
     string subject;
     string value;
 };
+
+// Prototype for thread routine
+void* handleClient(void * vptr);
 
 class msgd {
 public:
@@ -36,17 +41,7 @@ private:
     void create();
     void close_socket();
     void serve();
-    void handle(int);
-    string get_request(int);
-    bool send_response(int, string);
-
-    string parse_request(int client, string request);
-    string performPut(int client, istringstream& iss);
-    string performList(istringstream& iss);
-    string performGet(istringstream& iss);
-    string performReset();
-    vector<Message> findUserMsgs(string name);
-    void getMsg(int client, int length);
+    
     void makeThreads();
 
     int port_;
@@ -57,5 +52,6 @@ private:
     bool debug_;
     vector<Message> msgs_;
     vector<pthread_t*> threads_;
-    Buffer buffer_;
+    Buffer buffer_;// Holds a queue of clients
+    pthread_mutex_t mutex;
 };
