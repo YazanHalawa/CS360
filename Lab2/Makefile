@@ -1,15 +1,15 @@
 # Makefile for simple echo client and server
 
 CXX=		g++ $(CCFLAGS)
-SERVER_MAIN=	msgd_main.o msgd.o
-CLIENT_MAIN=	msg_main.o msg.o
+SERVER_MAIN=	msgd_main.o msgd.o Handler.o Buffer.o
+CLIENT_MAIN=	msg_main.o msg.o 
 OBJS =		$(SERVER_MAIN) $(CLIENT_Main)
 
 LIBS=
 
 CCFLAGS= -g
 
-all:	msgd msg
+all:	msgd msg 
 
 msgd: $(SERVER_MAIN)
 	$(CXX) -o msgd $(SERVER_MAIN) $(LIBS)

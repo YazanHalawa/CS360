@@ -41,4 +41,5 @@ private:
 	string cache_;
 	vector<Message>* msgs_;
 	pthread_mutex_t mutex;
+	pthread_cond_t cond;
 };

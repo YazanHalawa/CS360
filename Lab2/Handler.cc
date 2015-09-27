@@ -7,6 +7,7 @@ Handler::Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t 
 	buflen_ = 1024;
 	buf_ = new char [buflen_ + 1];
 	this->mutex = mutex;
+	pthread_cond_init(&cond, NULL);
 }
 
 Handler::~Handler(){
@@ -81,7 +82,9 @@ Handler::performPut(int client, istringstream& iss){
     newMsg.user = name;
     newMsg.subject = subject;
     newMsg.value = message;
+    pthread_mutex_lock(&mutex);
     msgs_.push_back(newMsg);
+    pthread_mutex_unlock(&mutex);
 
     return "OK\n"; 
 }
@@ -108,7 +111,9 @@ Handler::performList(istringstream& iss){
     }
 
     // Check the vector for the name and list the messages
+    pthread_mutex_lock(&mutex);
     vector<Message> list = findUserMsgs(name);
+    pthread_mutex_unlock(&mutex);
 
     // Go through the list vector and generate the response
     if (list.size() == 0){
@@ -140,8 +145,9 @@ Handler::performGet(istringstream& iss){
     }
 
     // Check the vector for the name and list the messages
+    pthread_mutex_lock(&mutex);
     vector<Message> list = findUserMsgs(name);
-
+    pthread_mutex_unlock(&mutex);
     // Generate the response
     if (list.size() == 0){
         return "error No messages for " + name + "\n";
@@ -160,7 +166,9 @@ Handler::performGet(istringstream& iss){
 string
 Handler::performReset(){
     // Clear the vector
+    pthread_mutex_lock(&mutex);
     msgs_.clear();
+    pthread_mutex_unlock(&mutex);
 
     // Generate the response
     if (msgs_.size() != 0){
