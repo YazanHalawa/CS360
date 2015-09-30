@@ -1,6 +1,6 @@
 #include "Handler.h"
 
-Handler::Handler(int client, vector<Message>& msgs, bool debug, pthread_mutex_t mutex){
+Handler::Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t mutex){
 	this->client = client;
 	this->msgs_ = msgs;
 	this->debug_ = debug;
@@ -12,6 +12,11 @@ Handler::Handler(int client, vector<Message>& msgs, bool debug, pthread_mutex_t 
 Handler::~Handler(){
 	delete buf_;
 }
+
+// vector<Message>
+// Handler::getMessages(){
+//     return msgs_;
+// }
 
 void
 Handler::handle() {
@@ -82,7 +87,7 @@ Handler::performPut(int client, istringstream& iss){
     newMsg.subject = subject;
     newMsg.value = message;
     pthread_mutex_lock(&mutex);
-    msgs_.push_back(newMsg);
+    msgs_->push_back(newMsg);
     pthread_mutex_unlock(&mutex);
 
     return "OK\n"; 
@@ -91,9 +96,9 @@ Handler::performPut(int client, istringstream& iss){
 vector<Message> 
 Handler::findUserMsgs(string name){
     vector<Message> list;
-    for (int i = 0; i < msgs_.size(); i++){
-        if (msgs_[i].user == name){
-            list.push_back(msgs_[i]);
+    for (int i = 0; i < msgs_->size(); i++){
+        if (msgs_->at(i).user == name){
+            list.push_back(msgs_->at(i));
         }
     }
     return list;
@@ -166,11 +171,11 @@ string
 Handler::performReset(){
     // Clear the vector
     pthread_mutex_lock(&mutex);
-    msgs_.clear();
+    msgs_->clear();
     pthread_mutex_unlock(&mutex);
 
     // Generate the response
-    if (msgs_.size() != 0){
+    if (msgs_->size() != 0){
         if (debug_)
             cout << "Failed to reset\n";
     }

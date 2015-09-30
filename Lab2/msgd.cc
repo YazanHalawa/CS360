@@ -93,19 +93,28 @@ void*
 handleClient(void* vptr){
     msgd* server = (msgd*) vptr;
     while(1){
+        // Grab a client from the queue
         int currClient = server->buffer_.take();
-        Handler handler = Handler(currClient, server->msgs_, server->debug_,
+
+        // Handle the client
+        Handler handler = Handler(currClient, &(server->msgs_), server->debug_,
                             server->mutex);
         handler.handle();
+
+        // Update the vector of messages
+        //server->msgs_ = handler.getMessages();
+
+        // Close client
         close(currClient);
     }
+    delete server;
 }
 
 void
 msgd::makeThreads(){
-    for (int i = 0; i < NUMBER_OF_THREADS; i ++){
+    for (int i = 0; i < NUMBER_OF_THREADS; i++){
         pthread_t thread;
-        pthread_create(&thread, NULL, &handleClient, this);
+        pthread_create(&thread, NULL, &handleClient, (void*) this);
         threads_.push_back(&thread);
     }
 }

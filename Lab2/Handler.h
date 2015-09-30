@@ -21,11 +21,12 @@ using namespace std;
 
 class Handler{
 public:
-	Handler(int client, vector<Message>& msgs, bool debug, pthread_mutex_t mutex);
+	Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t mutex);
 	~Handler();
 
 	void handle();
     string get_request(int);
+    //vector<Message> getMessages();
     bool send_response(int, string);
 
     string parse_request(int client, string request);
@@ -42,6 +43,6 @@ private:
 	int buflen_;
 	char* buf_;
 	string cache_;
-	vector<Message> msgs_;
+	vector<Message>* msgs_;
 	pthread_mutex_t mutex;
 };
