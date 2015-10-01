@@ -45,8 +45,7 @@ private:
 
     int port_;
     int server_;
-    int buflen_;
-    char* buf_;
+
     string cache_;
     
     vector<pthread_t*> threads_;

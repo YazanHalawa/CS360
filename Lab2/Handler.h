@@ -26,7 +26,6 @@ public:
 
 	void handle();
     string get_request(int);
-    //vector<Message> getMessages();
     bool send_response(int, string);
 
     string parse_request(int client, string request);

@@ -13,11 +13,6 @@ Handler::~Handler(){
 	delete buf_;
 }
 
-// vector<Message>
-// Handler::getMessages(){
-//     return msgs_;
-// }
-
 void
 Handler::handle() {
     // loop to handle all requests

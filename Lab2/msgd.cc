@@ -3,15 +3,12 @@
 msgd::msgd(int port, bool debug) {
     // setup variables
     port_ = port;
-    buflen_ = 1024;
-    buf_ = new char[buflen_+1];
     debug_ = debug;
     buffer_ = Buffer();
     pthread_mutex_init(&mutex, NULL);
 }
 
 msgd::~msgd() {
-    delete buf_;
 }
 
 void
@@ -101,13 +98,9 @@ handleClient(void* vptr){
                             server->mutex);
         handler.handle();
 
-        // Update the vector of messages
-        //server->msgs_ = handler.getMessages();
-
         // Close client
         close(currClient);
     }
-    delete server;
 }
 
 void
