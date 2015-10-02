@@ -3,7 +3,7 @@
 CXX=		g++ $(CCFLAGS)
 SERVER_MAIN=	msgd_main.o msgd.o Handler.o Buffer.o
 CLIENT_MAIN=	msg_main.o msg.o 
-OBJS =		$(SERVER_MAIN) $(CLIENT_Main)
+OBJS =		$(SERVER_MAIN) $(CLIENT_MAIN)
 
 LIBS=
 

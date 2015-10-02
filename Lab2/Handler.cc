@@ -10,11 +10,14 @@ Handler::Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t 
 }
 
 Handler::~Handler(){
+    cout << "destructor\n";
 	delete buf_;
 }
 
 void
 Handler::handle() {
+    if (debug_)
+        cout << "handle\n";
     // loop to handle all requests
     while (1) {
         // get a request
@@ -35,6 +38,8 @@ Handler::handle() {
 
 string 
 Handler::parse_request(int client, string request){
+    if (debug_)
+        cout << "parseRequest\n";
     string response = "";
     istringstream iss(request);
     string command = "";
@@ -55,6 +60,8 @@ Handler::parse_request(int client, string request){
 
 void
 Handler::getMsg(int client, int length){
+    if (debug_)
+        cout << "getMsg\n";
     while (cache_.length() < length){
         int nread = recv(client, buf_, 1024, 0);
         cache_.append(buf_, nread);
@@ -63,6 +70,8 @@ Handler::getMsg(int client, int length){
 
 string
 Handler::performPut(int client, istringstream& iss){
+    if (debug_)
+        cout << "performPut\n";
     // Extract variables from the istringstream
     string name = "", subject = "", message = "";
     int length = -1;
@@ -90,6 +99,8 @@ Handler::performPut(int client, istringstream& iss){
 
 vector<Message> 
 Handler::findUserMsgs(string name){
+    if (debug_)
+        cout << "findUserMsgs\n";
     vector<Message> list;
     for (int i = 0; i < msgs_->size(); i++){
         if (msgs_->at(i).user == name){
@@ -100,6 +111,8 @@ Handler::findUserMsgs(string name){
 }
 string
 Handler::performList(istringstream& iss){
+    if (debug_)
+        cout << "performList\n";
     // Extract variables from the istringstream
     string name = "";
     iss >> name;
@@ -133,6 +146,8 @@ Handler::performList(istringstream& iss){
 
 string
 Handler::performGet(istringstream& iss){
+    if (debug_)
+        cout << "performGet\n";
     // Extract the variables from the istringstream
     string name = "";
     int index = -1;
@@ -164,20 +179,24 @@ Handler::performGet(istringstream& iss){
 
 string
 Handler::performReset(){
+    if (debug_)
+        cout << "performReset\n";
     // Clear the vector
     pthread_mutex_lock(&mutex);
     msgs_->clear();
-    pthread_mutex_unlock(&mutex);
 
     // Generate the response
     if (msgs_->size() != 0){
         if (debug_)
             cout << "Failed to reset\n";
     }
+    pthread_mutex_unlock(&mutex);
     return "OK\n";
 }
 string
 Handler::get_request(int client) {
+    if (debug_)
+        cout << "getRequest\n";
     string request = "";
     // read until we get a newline
     while (request.find("\n") == string::npos) {
@@ -211,6 +230,8 @@ Handler::get_request(int client) {
 
 bool
 Handler::send_response(int client, string response) {
+    if (debug_)
+        cout << "sendResponse\n";
     // prepare to send response
     const char* ptr = response.c_str();
     int nleft = response.length();
