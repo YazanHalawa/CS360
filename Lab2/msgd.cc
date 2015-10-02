@@ -15,6 +15,8 @@ void
 msgd::run() {
     // create and run the server
     create();
+    // Make Threads
+    makeThreads();
     serve();
 }
 
@@ -54,9 +56,6 @@ msgd::create() {
         perror("listen");
         exit(-1);
     }
-
-    // Make Threads
-    makeThreads();
 }
 
 void
@@ -95,12 +94,13 @@ handleClient(void* vptr){
 
         // Handle the client
         Handler handler = Handler(currClient, &(server->msgs_), server->debug_,
-                            server->mutex);
+                            &(server->mutex));
         handler.handle();
 
         // Close client
         close(currClient);
     }
+    delete server;
 }
 
 void

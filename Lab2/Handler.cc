@@ -1,6 +1,6 @@
 #include "Handler.h"
 
-Handler::Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t mutex){
+Handler::Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t* mutex){
 	this->client = client;
 	this->msgs_ = msgs;
 	this->debug_ = debug;
@@ -10,6 +10,7 @@ Handler::Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t 
 }
 
 Handler::~Handler(){
+    delete buf_;
 }
 
 void
@@ -88,9 +89,9 @@ Handler::performPut(int client, istringstream& iss){
     newMsg.user = name;
     newMsg.subject = subject;
     newMsg.value = message;
-    //pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(mutex);
     msgs_->push_back(newMsg);
-    //pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(mutex);
 
     return "OK\n"; 
 }
@@ -109,6 +110,7 @@ Handler::findUserMsgs(string name){
 }
 string
 Handler::performList(istringstream& iss){
+    pthread_mutex_lock(mutex);
     if (debug_)
         cout << "performList\n";
     // Extract variables from the istringstream
@@ -121,9 +123,8 @@ Handler::performList(istringstream& iss){
     }
 
     // Check the vector for the name and list the messages
-    //pthread_mutex_lock(&mutex);
     vector<Message> list = findUserMsgs(name);
-    //pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(mutex);
 
     // Go through the list vector and generate the response
     if (list.size() == 0){
@@ -157,9 +158,9 @@ Handler::performGet(istringstream& iss){
     }
 
     // Check the vector for the name and list the messages
-    //pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(mutex);
     vector<Message> list = findUserMsgs(name);
-    //pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(mutex);
     // Generate the response
     if (list.size() == 0){
         return "error No messages for " + name + "\n";
@@ -180,7 +181,7 @@ Handler::performReset(){
     if (debug_)
         cout << "performReset\n";
     // Clear the vector
-    //pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(mutex);
     msgs_->clear();
 
     // Generate the response
@@ -188,7 +189,7 @@ Handler::performReset(){
         if (debug_)
             cout << "Failed to reset\n";
     }
-    //pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(mutex);
     return "OK\n";
 }
 string
@@ -198,11 +199,7 @@ Handler::get_request(int client) {
     string request = "";
     // read until we get a newline
     while (request.find("\n") == string::npos) {
-        cout << "in white loop\n";
-        //pthread_mutex_lock(&mutex);
         int nread = recv(client,buf_,1024,0);
-        cout << "after receive\n";
-        //pthread_mutex_unlock(&mutex);
         if (nread < 0) {
             if (errno == EINTR)
                 // the socket call was interrupted -- try again
@@ -214,10 +211,8 @@ Handler::get_request(int client) {
             // the socket is closed
             return "";
         }
-        cout << "before append\n";
         // be sure to use append in case we have binary data
         request.append(buf_,nread);
-        cout << "after append\n";
     }
 
 
@@ -229,7 +224,6 @@ Handler::get_request(int client) {
             request = request.substr(0, i);
         } 
     }
-    cout << "after loop\n";
     return request;
 }
 

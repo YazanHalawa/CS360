@@ -7,7 +7,7 @@ OBJS =		$(SERVER_MAIN) $(CLIENT_MAIN)
 
 LIBS=
 
-CCFLAGS= -g
+CCFLAGS= -g -pthreads
 
 all:	msgd msg 
 

@@ -21,7 +21,7 @@ using namespace std;
 
 class Handler{
 public:
-	Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t mutex);
+	Handler(int client, vector<Message>* msgs, bool debug, pthread_mutex_t* mutex);
 	~Handler();
 
 	void handle();
@@ -43,5 +43,5 @@ private:
 	char* buf_;
 	string cache_;
 	vector<Message>* msgs_;
-	pthread_mutex_t mutex;
+	pthread_mutex_t* mutex;
 };
