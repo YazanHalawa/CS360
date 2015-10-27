@@ -4,6 +4,10 @@ import socket
 import sys
 import errno
 import select
+import os
+import stat
+import re
+import time
 import traceback
 
 class Poller:
@@ -20,9 +24,9 @@ class Poller:
 		self.media = {}
 		self.hosts = {}
 		self.validMethods = {"GET", "POST", "DELETE", "HEAD", "PUT"} #allowed methods in HTTP request
-		self.paramters = {}
+		self.parameters = {}
 		self.size = 10000
-		self.configFile = "web.conf"
+		self.configFile = "web-server-testing/tests/web.conf"
 
 		self.open_socket()
 		self.read_config()
@@ -42,7 +46,7 @@ class Poller:
 					pathToHost = wordsInLine[2] 
 					if pathToHost[0] != '/': #path is a local file
 						pathToHost = os.getcwd() + '/' + pathToHost # acquire full path
-						self.hosts.append(pathToHost)
+						self.hosts[wordsInLine[1]] = pathToHost
 
 				elif wordsInLine[0] == "media":
 					self.media[wordsInLine[1]] = wordsInLine[2]
@@ -56,7 +60,7 @@ class Poller:
 					if self.debug:
 						print "not valid header type in config file: %s\n" %wordsInLine[0]
 
-			if debug:
+			if self.debug:
 				print "\nhosts: \n", self.hosts
 				print "\nmedia: \n", self.media
 				print "\nparameters: \n", self.parameters
