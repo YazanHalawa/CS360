@@ -7,7 +7,7 @@ alias deactivate 'test $?_OLD_VIRTUAL_PATH != 0 && setenv PATH "$_OLD_VIRTUAL_PA
 # Unset irrelevant variables.
 deactivate nondestructive
 
-setenv VIRTUAL_ENV "/Users/Yazan/Desktop/BYU/Fall2015/CS360/Lab4/env"
+setenv VIRTUAL_ENV "/home/yhalawa/Desktop/Lab4/CS360/Lab4/web-server-testing/web/env"
 
 set _OLD_VIRTUAL_PATH="$PATH"
 setenv PATH "$VIRTUAL_ENV/bin:$PATH"
