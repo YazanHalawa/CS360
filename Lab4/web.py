@@ -45,7 +45,7 @@ class Poller:
 						self.hosts.append(pathToHost)
 
 				elif wordsInLine[0] == "media":
-					self.media[wordsInLine[1]] = wordsInLine[2])
+					self.media[wordsInLine[1]] = wordsInLine[2]
 
 				elif wordsInLine[0] == "parameter":
 					self.parameters[wordsInLine[1]] = wordsInLine[2]
@@ -162,8 +162,10 @@ class Poller:
 				# If data was received
 				if data:
 					if '\r\n\r\n' in data: # check if request is complete
-						(response, path, rangeRequest) = self.parseRequest(self.cache[fd])
-						
+						(response, path) = self.parseRequest(self.cache[fd])
+						self.sendResponse(fd, response, path)
+						del self.cahce[fd]
+						break
 					else:
 						continue
 
@@ -177,8 +179,8 @@ class Poller:
 			except socket.error, (value, message):
 				# if no data is available, move on to another client
 				if value == errno.EAGAIN or errno.EWOULDBLOCK:
-						if (self.debug):
-							print "Got EAGAIN or EWOULDBLOCK in handle client\n"
+					if (self.debug):
+						print "Got EAGAIN or EWOULDBLOCK in handle client\n"
 					break
 
 			if data:
@@ -187,6 +189,42 @@ class Poller:
 				self.poller.unregister(fd)
 				self.clients[fd].close()
 				del self.clients[fd]
+
+	def sendResponse(self, fd, response, path):
+		""" Function to send Response back to client. """
+		if (self.debug):
+			print "entering send Response\n"
+
+		while True:
+			try:
+				self.clients[fd].send(response)
+				break
+			except socket.error, e:
+				if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
+					if self.debug:
+						print "Socket error when sending to client\n"
+					continue
+
+		responseCode = response.split()[1]
+		if responseCode == "200":
+			f = open(path, 'rb')
+
+			while True:
+				message = f.read(self.size)
+				if not message:
+					break
+
+				amountSent = 0
+				while amoundSent < len(message):
+					try:
+						currSent = self.clients[fd].send(message[amoundSent:])
+					except socket.error, e:
+						if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
+							if self.debug:
+								print "error while sending to client\n"
+							continue
+					amountSent += currSent
+			f.close()
 
 	def parseRequest(self, data):
 		if (self.debug):
@@ -205,6 +243,9 @@ class Poller:
 		path = None
 		host = None
 
+		# Get Protocol Version
+		version = "HTTP/" + parser.get_version()[0] + "." + parser.get_version()[1]
+
 		#check if request is valid
 		method = parser.get_method()
 		if method not in self.validMethods:
@@ -212,14 +253,21 @@ class Poller:
 				print "received a non valid method: %s\n" %method
 			response = self.createError("400", "Bad Request")
 
-		elif method != "GET" and method != "HEAD":
+		elif method != "GET":
 			if (debug):
 				print "received a method which we do not implement\n"
 			response = self.createError("501", "Not Implemented")
 		
-		elif method == "GET":
+		else:
 			url = parser.get_path()
-			if (url == "/"):
+
+			# Check for url errors
+			if (url == ""):
+				if self.debug:
+					print "url is empty\n"
+				resposne = self.createError("400", "Bad Request")
+
+			elif (url == "/"):
 				url = "/index.html"
 			headers = parser.get_headers()
 
@@ -264,6 +312,10 @@ class Poller:
 					print "full path is: %s\n"%path
 
 				response = self.createResponse(path)
+		if self.debug:
+			print "end of parse request\n"
+
+		return response, path
 
 	def createError(self, errID, errDescr):
 		""" Function to Create Error Message. """
@@ -275,80 +327,81 @@ class Poller:
 
 		htmlErr = '<html> <body> <h1>' + errNum + ' ' + errMsg + '</h1> </body> </html>'
 
-        if self.debug:
-            print "htmlErr: ", htmlErr
+		if self.debug:
+			print "htmlErr: ", htmlErr
 
-        error = 'HTTP/1.1' + ' ' + errNum + ' ' + errMsg + '\r\n'
-        error += 'Date: ' + currTime + '\r\n'
-        error += 'Server: Apache/2.2.22 (Ubuntu) \r\n'
-        error += 'Content-Type: text/html \r\n'
-        error += 'Content-Length: ' + str(len(htmlErr)) + '\r\n'
-        error += '\r\n'
-        error += htmlErr
-        error += '\r\n\r\n'
-        return error 
+		error = 'HTTP/1.1' + ' ' + errNum + ' ' + errMsg + '\r\n'
+		error += 'Date: ' + currTime + '\r\n'
+		error += 'Server: Apache/2.2.22 (Ubuntu) \r\n'
+		error += 'Content-Type: text/html \r\n'
+		error += 'Content-Length: ' + str(len(htmlErr)) + '\r\n'
+		error += '\r\n'
+		error += htmlErr
+		error += '\r\n\r\n'
 
-
-    def createResponse(self, path):
-    	""" Function to create response messages. """
-    	if (self.debug):
-    		print "entering create Response\n"
-
-    	pathValidationError = self.verifyPath(path)
-
-    	if pathValidationError == None: # No Error
-
-    		t = time.time()
-    		currTime = self.get_time(t)
-    		fileType = None
-    		fileExt = path.split('.')[-1]
-
-    		if fileExt in self.media:
-    			fileType = self.media[fileExt]
-    		else:
-    			fileType = 'text/plain'
-
-    		response = 'HTTP/1.1 200 OK \r\n'
-
-    		response += 'Date: %s\r\n'%currTime
-    		response += 'Server: Apache/2.2.22 (Ubuntu)\r\n'
-    		response += 'Content-Type: %s\r\n'%fileType
-
-    		response += 'Content-Length: %s\r\n' %str(os.stat(path).st_size)
-    		response += 'Last-Modified: %s\r\n'%self.get_time(os.stat(path).st_mtime)
-    		response += '\r\n'
-
-    		return response
-    	else:
-    		return pathValidationError
+		return error 
 
 
+	def createResponse(self, path):
+		""" Function to create response messages. """
+		if (self.debug):
+			print "entering create Response\n"
 
-    def verifyPath(self, path):
-    	""" Function to verify path and its permissions. """
-    	if (self.debug):
-    		print "entering verify path function\n"
+		pathValidationError = self.verifyPath(path)
 
-    	try:
-    		open(path)
-    	except IOError as (errno, strerror):
-    		if errno == 13:
-    			return self.createError("403", "Forbidden")
-    		elif errno == 2:
-    			return self.createError("404", "Not Found")
-    		else:
-    			return self.createError("500", "Internal Server Error")
-   		return None
+		if pathValidationError == None: # No Error
 
-    def get_time(self, t):
-    	""" Function to get time in GMT Format. """
-    	if (self.debug):
-    		print "Entering get_time function\n"
+			t = time.time()
+			currTime = self.get_time(t)
+			fileType = None
+			fileExt = path.split('.')[-1]
 
-    	gmtTime = time.gmtime(t)
-    	format = '%a, %d %b %Y %H :%M :%S GMT'
-        time_string = time.strftime(format,gmt)
-        return time_string
+			if fileExt in self.media:
+				fileType = self.media[fileExt]
+			else:
+				fileType = 'text/plain'
+
+			response = 'HTTP/1.1 200 OK \r\n'
+
+			response += 'Date: %s\r\n'%currTime
+ 			response += 'Server: Apache/2.2.22 (Ubuntu)\r\n'
+			response += 'Content-Type: %s\r\n'%fileType
+
+			response += 'Content-Length: %s\r\n' %str(os.stat(path).st_size)
+			response += 'Last-Modified: %s\r\n'%self.get_time(os.stat(path).st_mtime)
+			response += '\r\n'
+			
+			return response
+		else:
+			return pathValidationError
+
+
+
+	def verifyPath(self, path):
+		""" Function to verify path and its permissions. """
+		if (self.debug):
+			print "entering verify path function\n"
+
+		try:
+			open(path)
+		except IOError as (errno, strerror):
+			if errno == 13:
+				return self.createError("403", "Forbidden")
+			elif errno == 2:
+				return self.createError("404", "Not Found")
+			else:
+				return self.createError("500", "Internal Server Error")
+		return None
+
+	def get_time(self, t):
+		""" Function to get time in GMT Format. """
+		if (self.debug):
+			print "Entering get_time function\n"
+
+		gmtTime = time.gmtime(t)
+		format = '%a, %d %b %Y %H :%M :%S GMT'
+		time_string = time.strftime(format,gmt)
+		return time_string
 
 
 

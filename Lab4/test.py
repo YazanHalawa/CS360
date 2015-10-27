@@ -10,7 +10,7 @@ def main():
 
     p = HttpParser()
     nparsed = p.execute(data,len(data))
-    print p.get_method(),p.get_path(),p.get_headers()
+    print p.get_method(), p.get_version()[1], p.get_path(),p.get_headers()
 
 if __name__ == "__main__":
     main()

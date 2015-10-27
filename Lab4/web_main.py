@@ -23,9 +23,9 @@ class Main:
 	def run(self):
 		poller = Poller(self.args.port, self.args.debug)
 		poller.run()
-def __name__ == "__main__":
+if __name__ == "__main__":
 	main_ = Main()
-	main_.parse_arguments()
+	main_.parseArguments()
 	try:
 		main_.run()
 	except KeyboardInterrupt:
