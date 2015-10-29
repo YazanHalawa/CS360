@@ -238,7 +238,7 @@ class Poller:
 					continue
 
 		responseCode = response.split()[1]
-		if responseCode == "200":
+		if path and responseCode == "200":
 			f = open(path, 'rb')
 
 			while True:
@@ -300,9 +300,9 @@ class Poller:
 		
 		# Do the sending
 		totalBytesSent = 0
-		while totalBytesSent < len(totalBytesRead):
+		while totalBytesSent < len(bytesRead):
 			try:
-				currSent = self.clients[fd].send(totalBytes[totalBytesSent:])
+				currSent = self.clients[fd].send(bytesRead[totalBytesSent:])
 
 			except socket.error, e:
 				if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
