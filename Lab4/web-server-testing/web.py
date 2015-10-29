@@ -309,7 +309,7 @@ class Poller:
 					if self.debug:
 						print "error while sending to client\n"
 					continue
-			amountSent += currSent
+			totalBytesSent += currSent
 
 	def closeSocket(self, fd):
 		""" Function to close the socket. """
