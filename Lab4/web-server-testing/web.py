@@ -122,8 +122,8 @@ class Poller:
 					self.handleServer()
 					continue
 				# handle client socket
-				result = self.handleClient(fd)
 				self.lastUsed[fd] = currentTime
+				result = self.handleClient(fd)
 
 		now = time.time()
 		if (now-lastTime) > self.threshold:
