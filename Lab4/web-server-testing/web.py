@@ -21,10 +21,12 @@ class Poller:
 		self.debug = debug
 		self.cache = {} # array of separate client caches
 		self.clients = {}
+		self.lastUsed = {} #store last time the request was made
 		self.media = {}
 		self.hosts = {}
 		self.validMethods = {"GET", "POST", "DELETE", "HEAD", "PUT"} #allowed methods in HTTP request
 		self.parameters = {}
+		self.threshold = 5 #for the mark ans sweep
 		self.timeout = 1
 		self.size = 10000
 		self.configFile = "tests/web.conf"
@@ -78,7 +80,7 @@ class Poller:
 			self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 			self.server.bind((self.host, self.port))
-			self.server.listen(10)
+			self.server.listen(5)
 			self.server.setblocking(0)
 		except socket.error, (value,message):
 			if self.server:
@@ -94,6 +96,9 @@ class Poller:
 		self.poller = select.epoll()
 		self.pollmask = select.EPOLLIN | select.EPOLLHUP | select.EPOLLERR
 		self.poller.register(self.server, self.pollmask)
+		
+		lastTime = time.time()
+
 		if (self.debug):
 			print "in run before loop\n"
 		while True:
@@ -104,6 +109,9 @@ class Poller:
 				if (self.debug):
 					print "failed to poll on client\n"
 				return
+
+			currentTime = time.time()
+
 			for (fd, event) in fds:
 				# handle errors
 				if event & (select.POLLHUP | select.POLLERR):
@@ -115,6 +123,21 @@ class Poller:
 					continue
 				# handle client socket
 				result = self.handleClient(fd)
+				self.lastUsed[fd] = currentTime
+
+		now = time.time()
+		if (now-lastTime) > self.threshold:
+			toDelete = []
+			for socket in self.lastUsed:
+				if float(now-self.lastUsed[socket]) > float(self.timeout):
+				# close the socket
+				if (self.debug):
+					print "in mark and sweep algorithm, closing ", socket
+					toDelete.append(socket)
+			for socket in toDelete:
+				self.closeSocket(socket)
+			toDelete = []
+			lastTime = time.time()
 
 	def handleError(self,fd):
 		""" Handle a client """
@@ -129,8 +152,7 @@ class Poller:
 			self.poller.register(self.server,self.pollmask)
 		else:
 			# close the socket
-			self.clients[fd].close()
-			del self.clients[fd]
+			self.closeSocket(fd)
 
 	def handleServer(self):
 		if (self.debug):
@@ -148,6 +170,7 @@ class Poller:
 		# set client socket to be non blocking
 		client.setblocking(0)
 		self.clients[client.fileno()] = client
+		self.lastUsed[client.fileno()] = -1
 		self.poller.register(client.fileno(), self.pollmask)
 
 	def handleClient(self, fd):
@@ -171,7 +194,7 @@ class Poller:
 				# If data was received
 				if data:
 					if '\r\n\r\n' in data: # check if request is complete
-						(response, path) = self.parseRequest(self.cache[fd])
+						(response, path, isRangeReq) = self.parseRequest(self.cache[fd])
 						self.sendResponse(fd, response, path)
 						del self.cache[fd]
 						break
@@ -192,14 +215,14 @@ class Poller:
 						print "Got EAGAIN or EWOULDBLOCK in handle client\n"
 					break
 
-			if data:
-				self.clients[fd].send(data)
-			else:
-				self.poller.unregister(fd)
-				self.clients[fd].close()
-				del self.clients[fd]
+			#if data:
+				#self.clients[fd].send(data)
+			#else:
+				#self.poller.unregister(fd)
+				#self.clients[fd].close()
+				#del self.clients[fd]
 
-	def sendResponse(self, fd, response, path):
+	def sendResponse(self, fd, response, path, isRangeReq):
 		""" Function to send Response back to client. """
 		if (self.debug):
 			print "entering send Response\n"
@@ -235,14 +258,70 @@ class Poller:
 					amountSent += currSent
 			f.close()
 
+		#Extra credit, handle range requests
+		if path and responseCode == "206":
+			self.sendRangeResponse(fd, response, path, isRangeReq)
+
+	def sendRangeResponse(self, fd, response, path, isRangeReq):
+		""" Function to send range response. """
+		if (self.debug):
+			print "entered send Range Response. "
+
+		(start, end, diff) = self.splitRangeRequest(isRangeReq)
+
+		if (self.debug):
+			print "start: ", start
+			print "end: ", end
+			print "diff: ", diff
+
+		reader = open(path, 'rb')
+		bytesRead = ''
+		totalBytesLeft = diff
+		totalBytesRead = 0
+
+		# Do the Reading
+		while (totalBytesRead < totalBytesLeft):
+
+			reader.seek(start + totalBytesRead, 0)
+
+			if (diff < self.size):
+				bytesRead = reader.read(diff)
+				totalBytesRead += len(bytesRead)
+				diff = 0
+
+			else:
+				bytesRead = reader.read(self.size)
+				totalBytesRead += len(bytesRead)
+				diff -= self.size
+
+			if not bytesRead:
+				break
+		reader.close()
+		
+		# Do the sending
+		totalBytesSent = 0
+		while totalBytesSent < len(totalBytesRead):
+			try:
+				currSent = self.clients[fd].send(totalBytes[totalBytesSent:])
+
+			except socket.error, e:
+				if e.args[0] == errno.EAGAIN or e.args[0] == errno.EWOULDBLOCK:
+					if self.debug:
+						print "error while sending to client\n"
+					continue
+			amountSent += currSent
+
 	def closeSocket(self, fd):
 		""" Function to close the socket. """
 		if (self.debug):
 			print "Entering close socket\n"
 
 		if fd in self.clients:
+			self.clients[fd].close()
 			del self.clients[fd]
-		elif fd in self.cache:
+		if fd in self.lastUsed:
+			del self.lastUsed[fd]
+		if fd in self.cache:
 			del self.cache[fd]
  
 	def parseRequest(self, data):
@@ -262,6 +341,8 @@ class Poller:
 		response = None
 		path = None
 		host = None
+		isRangeReq = None
+		isHeadReq = False
 
 		# Get Protocol Version
 		version = "HTTP/1.1"
@@ -273,12 +354,14 @@ class Poller:
 				print "received a non valid method: %s\n" %method
 			response = self.createError("400", "Bad Request")
 
-		elif method != "GET":
+		elif method != "GET" and method != "HEAD":
 			if (self.debug):
 				print "received a method which we do not implement\n"
 			response = self.createError("501", "Not Implemented")
 		
 		else:
+			if method == "HEAD":
+				isHeadReq = True
 			url = parser.get_path()
 
 			# Check for url errors
@@ -291,6 +374,11 @@ class Poller:
 				url = "web/index.html"
 
 			headers = parser.get_headers()
+
+			if "Range" in headers:
+				isRangeReq = headers["Range"]
+				if self.debug:
+					print "Range Request = %s" %isRangeReq
 
 			#get Host
 			if "Host" in headers:
@@ -339,10 +427,27 @@ class Poller:
 					print "full path is: %s\n"%path
 
 				response = self.createResponse(path)
+		
+		if isHeadReq:
+			path = None
+
 		if self.debug:
 			print "end of parse request\n"
 
-		return response, path
+		return response, path, isRangeReq
+
+	def splitRangeRequest(self, rangeReq):
+		""" Function to split the range request. """
+		if (self.debug):
+			print "entered split Range Request------\n"
+		
+		rangeReq = rangeReq.split('=')
+		rangeReq = rangeReq[1].split('-')
+		start = int(rangeReq[0])
+		end = int(rangeReq[1])
+		diff = (end-start) + 1
+
+		return start, end, diff
 
 	def createError(self, errID, errDescr):
 		""" Function to Create Error Message. """
@@ -369,7 +474,7 @@ class Poller:
 		return error 
 
 
-	def createResponse(self, path):
+	def createResponse(self, path, isRangeReq):
 		""" Function to create response messages. """
 		if (self.debug):
 			print "entering create Response\n"
@@ -382,19 +487,31 @@ class Poller:
 			currTime = self.get_time(t)
 			fileType = None
 			fileExt = path.split('.')[-1]
+			# Variables for range request
+			start = None
+			end = None
+			diff = None
 
 			if fileExt in self.media:
 				fileType = self.media[fileExt]
 			else:
 				fileType = 'text/plain'
 
-			response = 'HTTP/1.1 200 OK \r\n'
+			if isRangeReq == None:
+				response = 'HTTP/1.1 200 OK \r\n'
+			else:
+				response = 'HTTP/1.1 206 Parial Message \r\n'
+				(start, end, diff) = self.splitRangeRequest(isRangeReq)
 
 			response += 'Date: %s\r\n'%currTime
  			response += 'Server: Apache/2.2.22 (Ubuntu)\r\n'
 			response += 'Content-Type: %s\r\n'%fileType
 
-			response += 'Content-Length: %s\r\n' %str(os.stat(path).st_size)
+			if isRangeReq == None:
+				response += 'Content-Length: %s\r\n' %str(os.stat(path).st_size)
+			else:
+				response += 'Content-Length: %s\r\n'%str(diff)
+
 			response += 'Last-Modified: %s\r\n'%self.get_time(os.stat(path).st_mtime)
 			response += '\r\n'
 			

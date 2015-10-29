@@ -1,0 +1,1 @@
+﻿I created a thread safe class called buffer which holds the queue of 10 clients and uses mutexes and condition variables whenever it accesses the queue(synchronization).  Then in my handler class whenever I read or write to the vector of messages that is shared between the threads I use the mutex to lock and unlock and make sure that the critical section is safe.  
