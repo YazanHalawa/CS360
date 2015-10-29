@@ -131,8 +131,8 @@ class Poller:
 			for socket in self.lastUsed:
 				if float(now-self.lastUsed[socket]) > float(self.timeout):
 				# close the socket
-				if (self.debug):
-					print "in mark and sweep algorithm, closing ", socket
+					if (self.debug):
+						print "in mark and sweep algorithm, closing ", socket
 					toDelete.append(socket)
 			for socket in toDelete:
 				self.closeSocket(socket)
@@ -195,7 +195,7 @@ class Poller:
 				if data:
 					if '\r\n\r\n' in data: # check if request is complete
 						(response, path, isRangeReq) = self.parseRequest(self.cache[fd])
-						self.sendResponse(fd, response, path)
+						self.sendResponse(fd, response, path, isRangeReq)
 						del self.cache[fd]
 						break
 					else:
@@ -414,7 +414,7 @@ class Poller:
 					if (self.debug):
 						print "full path is: %s\n"%path
 
-					response = self.createResponse(path)
+					response = self.createResponse(path, isRangeReq)
 
 			else: #use given host
 				path = self.hosts[host]
@@ -426,7 +426,7 @@ class Poller:
 				if (self.debug):
 					print "full path is: %s\n"%path
 
-				response = self.createResponse(path)
+				response = self.createResponse(path, isRangeReq)
 		
 		if isHeadReq:
 			path = None
