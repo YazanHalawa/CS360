@@ -122,8 +122,8 @@ class Poller:
 					self.handleServer()
 					continue
 				# handle client socket
-				result = self.handleClient(fd)
 				self.lastUsed[fd] = currentTime
+				result = self.handleClient(fd)
 
 		now = time.time()
 		if (now-lastTime) > self.threshold:
@@ -239,7 +239,7 @@ class Poller:
 
 		responseCode = response.split()[1]
 		if responseCode == "200":
-			f = open(path, 'rb')
+			f = open(path, "rb")
 
 			while True:
 				message = f.read(self.size)
